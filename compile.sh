@@ -4,6 +4,8 @@ DAT=data
 TARGET=main
 
 #NO espacios alrededor del =, para asignar valor a variables en shell
+mkdir -p $BIN
+
 FC=gfortran
 FFLAGS="-c -J$BIN -I$BIN"
 
