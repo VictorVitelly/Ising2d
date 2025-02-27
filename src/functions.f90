@@ -40,5 +40,16 @@ contains
     DeltaH=2._dp*real(spin(i,j),dp)*neigh
   end function DeltaH
 
+  function Magnet(spin)
+    integer(i4), dimension(:,:), intent(in) :: spin
+    integer(i4) :: i,j
+    real(dp) :: Magnet
+    Magnet=0._dp
+    do i=1,size(spin,dim=1)
+      do j=1,size(spin,dim=2)
+        Magnet=Magnet+real(spin(i,j),dp)
+      end do
+    end do
+  end function Magnet
 
 end module functions
