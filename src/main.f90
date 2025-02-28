@@ -12,19 +12,16 @@ program main
 
   open(20, file = 'data/energy.dat', status = 'replace')
   open(30, file = 'data/magnetization.dat', status = 'replace')
+  open(40, file = 'data/susceptibility.dat', status = 'replace')
+  open(50, file = 'data/heat.dat', status = 'replace')
   allocate(spin(N,N))
   allocate(E(Nmsrs))
   allocate(M(Nmsrs))
   allocate(susc1(Nmsrs))
-  allocate(susc2(Nmsrs))
   allocate(heat1(Nmsrs))
-  allocate(heat2(Nmsrs))
-  susc1=0._dp
-  susc2=0._dp
-  heat1=0._dp
-  heat2=0._dp
 
   do j=0,30
+    call initialize1(E,M,susc1,heat1)
     call cold_start(spin)
     k=0
     T=1._dp+0.1_dp*real(j,dp)
@@ -32,19 +29,24 @@ program main
       call montecarlo(spin,T )
       if(i>thermalization .and. mod(i,eachsweep)==0) then
         k=k+1
-        call measure(spin,E(k),M(k),susc1(k),susc2(k),heat1(k),heat2(k))
+        call measure(spin,E(k),M(k),susc1(k),heat1(k))
       end if
     end do
     call mean_scalar(E,Emean,deltaE)
     call mean_scalar(M,Mmean,deltaM)
+    call mean_scalar(susc1,suscmean,deltasusc)
     write(20,*) T, Emean/(real(N**2,dp) ), deltaE/(real(N**2,dp) )
     write(30,*) T, Mmean/(real(N**2,dp) ), deltaM/(real(N**2,dp) )
+    write(40,*) T, (suscmean)/(real(N**2,dp) )-Mmean**2/(real(N**2,dp) )
+    !write(50,*) T, (heatmean)/(real(N**2,dp) )-Emean**2/(real(N**2,dp) )
   end do
 
   close(20)
   close(30)
+  close(40)
+  close(50)
   deallocate(spin,E,M)
-  deallocate(susc1,susc2,heat1,heat2)
+  deallocate(susc1,heat1)
 
 contains
 
