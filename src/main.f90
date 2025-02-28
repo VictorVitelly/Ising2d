@@ -15,6 +15,14 @@ program main
   allocate(spin(N,N))
   allocate(E(Nmsrs))
   allocate(M(Nmsrs))
+  allocate(susc1(Nmsrs))
+  allocate(susc2(Nmsrs))
+  allocate(heat1(Nmsrs))
+  allocate(heat2(Nmsrs))
+  susc1=0._dp
+  susc2=0._dp
+  heat1=0._dp
+  heat2=0._dp
 
   do j=0,30
     call cold_start(spin)
@@ -24,7 +32,7 @@ program main
       call montecarlo(spin,T )
       if(i>thermalization .and. mod(i,eachsweep)==0) then
         k=k+1
-        call measure(spin,E(k),M(k))
+        call measure(spin,E(k),M(k),susc1(k),susc2(k),heat1(k),heat2(k))
       end if
     end do
     call mean_scalar(E,Emean,deltaE)
@@ -36,6 +44,7 @@ program main
   close(20)
   close(30)
   deallocate(spin,E,M)
+  deallocate(susc1,susc2,heat1,heat2)
 
 contains
 

@@ -9,6 +9,8 @@ module parameters
     integer(i4) :: i,k,j
     real(dp),allocatable :: E(:),M(:)
     real(dp) :: T,Emean,deltaE,Mmean,deltaM
+    real(dp),allocatable :: susc1(:),susc2(:)
+    real(dp),allocatable :: heat1(:),heat2(:)
 
 
 end module parameters
