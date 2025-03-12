@@ -119,6 +119,30 @@ contains
     !call jackknife(x,y,deltay)
   end subroutine mean_scalar
 
+  subroutine mean_vector(x,y,deltay)
+    real(dp), dimension(N,Nmsrs), intent(in) :: x
+    real(dp), dimension(N), intent(out) :: y,deltay
+    integer(i4) :: i1
+    y=0._dp
+    deltay=0._dp
+    do i1=1,N
+      call mean_scalar(x(i1,:),y(i1),deltay(i1))
+    end do
+  end subroutine mean_vector
+
+  subroutine mean_matrix(x,y,deltay)
+    real(dp), dimension(N,N,Nmsrs), intent(in) :: x
+    real(dp), dimension(N,N), intent(out) :: y,deltay
+    integer(i4) :: i1,i2
+    y=0._dp
+    deltay=0._dp
+    do i1=1,N
+      do i2=1,N
+      call mean_scalar(x(i1,i2,:),y(i1,i2),deltay(i1,i2))
+      end do
+    end do
+  end subroutine mean_matrix
+
   subroutine heat_jackk(heat1,heat2,heat_ave,deltaheat)
     real(dp), dimension(:), intent(in) :: heat1, heat2
     real(dp), intent(out) :: heat_ave, deltaheat
