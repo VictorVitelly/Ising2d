@@ -8,7 +8,7 @@ program main
   use measurements
   implicit none
 
-  !call thermalize(2.3_dp)
+  !call thermalize(2.25_dp)
 
   open(20, file = 'data/energy.dat', status = 'replace')
   open(30, file = 'data/magnetization.dat', status = 'replace')
@@ -20,11 +20,12 @@ program main
   allocate(susc1(Nmsrs))
   allocate(heat1(Nmsrs))
 
-  do j=0,60
+  do j=0,32
+    write(*,*) j
     call initialize1(E,M,susc1,heat1)
     call cold_start(spin)
     k=0
-    T=2_dp+0.01_dp*real(j,dp)
+    T=2.24_dp+0.005_dp*real(j,dp)
     do i=1,sweeps
       call montecarlo(spin,T )
       if(i>thermalization .and. mod(i,eachsweep)==0) then
@@ -38,8 +39,8 @@ program main
     call heat_jackk(heat1,E,heatmean,deltaheat)
     write(20,*) T, Emean/(real(N**2,dp) ), deltaE/(real(N**2,dp) )
     write(30,*) T, Mmean/(real(N**2,dp) ), deltaM/(real(N**2,dp) )
-    write(40,*) T, (suscmean)/(real(N**2,dp) ), deltasusc/(real(N**2,dp))
-    write(50,*) T, (heatmean)/(real(N**2,dp) ), deltaheat/(real(N**2,dp))
+    write(40,*) T, (suscmean)/(real(N**2,dp)*T ), deltasusc/(real(N**2,dp)*T )
+    write(50,*) T, (heatmean)/(real(N**2,dp)*(T**2) ), deltaheat/(real(N**2,dp)*(T**2) )
   end do
 
   close(20)
