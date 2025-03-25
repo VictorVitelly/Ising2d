@@ -86,4 +86,58 @@ contains
     end do
   end subroutine correlation_function
 
+  subroutine correlation_function2(corr1,corr2,CF,CFprom)
+    real(dp), dimension(N,Nmsrs), intent(in) :: corr1
+    real(dp), dimension(N,N,Nmsrs), intent(in) :: corr2
+    real(dp), dimension(N,N), intent(out) :: CF,CFprom
+    real(dp), dimension(N,N):: jackk
+    real(dp), allocatable :: corr1m(:,:)
+    real(dp), allocatable :: corr2m(:,:,:),CFm(:,:,:)
+    real(dp), dimension(N) :: corr1prom,corr1delta
+    real(dp), dimension(N,N) :: corr2prom,corr2delta
+    integer(i4) :: i1,i2,i3
+    corr1prom=0._dp
+    corr2prom=0._dp
+    corr1delta=0._dp
+    corr2delta=0._dp
+    call mean_vector(corr1,corr1prom,corr1delta)
+    call mean_matrix(corr2,corr2prom,corr2delta)
+    do i1=1,N
+      do i2=1,N
+        CF(i1,i2)=corr2prom(i1,i2)-corr1prom(i1)*corr1prom(i2)
+        !CFprom(i1,i2)=Sqrt((corr2delta(i1,i2))**2+(corr1prom(i1)*corr1delta(i2))**2 +(corr1prom(i2)*corr1delta(i1) )**2)
+      end do
+    end do
+    allocate(corr1m(N,Mbins) )
+    allocate(corr2m(N,N,Mbins) )
+    allocate(CFm(N,N,Mbins) )
+    jackk=0._dp
+    do i1=1,Mbins
+    corr1m(:,i1)=0._dp
+    corr2m(:,:,i1)=0._dp
+      do i2=1,Nmsrs
+        if(i2 .le. (i1-1)*Nmsrs/Mbins) then
+          corr1m(:,i1)=corr1m(:,i1)+corr1(:,i2)
+          corr2m(:,:,i1)=corr2m(:,:,i1)+corr2(:,:,i2)
+        else if(i2 > i1*Nmsrs/Mbins) then
+          corr1m(:,i1)=corr1m(:,i1)+corr1(:,i2)
+          corr2m(:,:,i1)=corr2m(:,:,i1)+corr2(:,:,i2)
+        end if
+      end do
+    end do
+    corr1m=corr1m/(real(Nmsrs,dp) -real(Nmsrs/Mbins,dp))
+    corr2m=corr2m/(real(Nmsrs,dp) -real(Nmsrs/Mbins,dp))
+    do i3=1,Mbins
+      do i1=1,N
+        do i2=1,N
+          CFm(i1,i2,i3)=corr2m(i1,i2,i3)-corr1m(i1,i3)*corr1m(i2,i3)
+        end do
+      end do
+    end do
+    do i1=1,Mbins
+      jackk(:,:)=jackk(:,:)+(CF(:,:)-CFm(:,:,i1) )**2
+    end do
+    CFprom(:,:)=Sqrt(real(Mbins-1,dp)*jackk(:,:)/real(Mbins,dp))
+  end subroutine correlation_function2
+
 end module measurements
