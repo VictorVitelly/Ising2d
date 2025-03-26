@@ -8,11 +8,11 @@ program main
   use measurements
   implicit none
 
-  !call thermalize(2.25_dp)
+  call thermalize(2.5_dp)
 
   !call vary_temp(1._dp,4._dp,31)
 
-  call correlate(2.5_dp,2.82_dp,8)
+  !call correlate(2.5_dp,2.82_dp,8)
 
   !call correlate(1.5_dp,2.5_dp,10)
 
@@ -22,6 +22,7 @@ contains
   real(dp), intent(in) :: T
   integer(i4) :: i
   integer(i4), allocatable :: spin(:,:)
+  real(dp) :: auto,auto_delta
   open(10, file = 'data/therm.dat', status = 'replace')
   allocate(spin(N,N))
     call cold_start(spin)
@@ -31,6 +32,8 @@ contains
       end if
       call montecarlo(spin,T )
     end do
+    call autocorrelation(T,50,spin,auto,auto_delta)
+    !write(*,*) 10, auto, auto_delta
   close(10)
   deallocate(spin)
   end subroutine thermalize
