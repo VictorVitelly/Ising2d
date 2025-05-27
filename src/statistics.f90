@@ -66,9 +66,8 @@ contains
     deltay=Sqrt(variance/real(N,dp))
   end subroutine standard_error
 
-  subroutine jackknife(x,Mbins,y,deltay)
+  subroutine jackknife(x,y,deltay)
     real(dp), dimension(:), intent(in) :: x
-    integer(i4), intent(in) :: Mbins
     real(dp), intent(in) :: y
     real(dp), intent(out) :: deltay
     real(dp) :: jackk
@@ -94,6 +93,18 @@ contains
       deltay=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
   end subroutine jackknife
 
+  subroutine mean_0(x,y)
+    real(dp), dimension(:), intent(in) :: x
+    real(dp), intent(out) :: y
+    integer(i4) :: k,N
+    N=size(x)
+    y=0._dp
+    do k=1,N
+      y=y+x(k)
+    end do
+    y=y/real(N,dp)
+  end subroutine mean_0
+
   subroutine mean_scalar(x,y,deltay)
     real(dp), dimension(:), intent(in) :: x
     real(dp), intent(out) :: y,deltay
@@ -105,7 +116,62 @@ contains
     end do
     y=y/real(N,dp)
     call standard_error(x,y,deltay)
-    !call jackknife(x,10,y,deltay)
+    !call jackknife(x,y,deltay)
   end subroutine mean_scalar
+
+  subroutine mean_vector(x,y,deltay)
+    real(dp), dimension(N,Nmsrs), intent(in) :: x
+    real(dp), dimension(N), intent(out) :: y,deltay
+    integer(i4) :: i1
+    y=0._dp
+    deltay=0._dp
+    do i1=1,N
+      call mean_scalar(x(i1,:),y(i1),deltay(i1))
+    end do
+  end subroutine mean_vector
+
+  subroutine mean_matrix(x,y,deltay)
+    real(dp), dimension(N,N,Nmsrs), intent(in) :: x
+    real(dp), dimension(N,N), intent(out) :: y,deltay
+    integer(i4) :: i1,i2
+    y=0._dp
+    deltay=0._dp
+    do i1=1,N
+      do i2=1,N
+      call mean_scalar(x(i1,i2,:),y(i1,i2),deltay(i1,i2))
+      end do
+    end do
+  end subroutine mean_matrix
+
+  subroutine heat_jackk(heat1,heat2,heat_ave,deltaheat)
+    real(dp), dimension(:), intent(in) :: heat1, heat2
+    real(dp), intent(out) :: heat_ave, deltaheat
+    integer(i4) :: N,k,i
+    real(dp) :: heat1t,heat2t,jackk,Ntot
+    real(dp), dimension(Mbins) :: heatmean1,heatmean2,heat_avev
+      N=size(heat1)
+      Ntot=real(N,dp)-real(N,dp)/real(Mbins,dp)
+      call mean_0(heat1,heat1t)
+      call mean_0(heat2,heat2t)
+      heat_ave=heat1t-heat2t**2
+      heatmean1=0._dp
+      heatmean2=0._dp
+      do i=1,Mbins
+        do k=1,N
+          if(k .le. (i-1)*N/Mbins) then
+            heatmean1(i)=heatmean1(i)+heat1(k)
+            heatmean2(i)=heatmean2(i)+heat2(k)
+          else if(k > i*N/Mbins) then
+            heatmean1(i)=heatmean1(i)+heat1(k)
+            heatmean2(i)=heatmean2(i)+heat2(k)
+          end if
+        end do
+        heat_avev(i)=(heatmean1(i)/Ntot) -(heatmean2(i)/Ntot)**2
+      end do
+      do k=1,Mbins
+        jackk=jackk+(heat_avev(k)-heat_ave )**2
+      end do
+      deltaheat=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
+  end subroutine heat_jackk
 
 end module statistics
