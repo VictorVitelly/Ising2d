@@ -158,7 +158,7 @@ contains
     end do
     call mean_0(E,E_ave)
 
-    do tt=1,tmax
+    do tt=0,tmax
     auto=0._dp
     auto_delta=0._dp
 

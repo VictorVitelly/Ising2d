@@ -8,13 +8,17 @@ program main
   use measurements
   implicit none
 
+  !Write thermalization history in a file and computes autocorrelation
   call thermalize(2.5_dp)
 
-  !call vary_temp(1._dp,4._dp,31)
+  !Measure energy, magnetization, susceptibility and heat capacity in an
+  !interval of temperatures, (initial temp., final temp, n. of points between them)
+  call vary_temp(2.4_dp,3.4_dp,5)
 
-  !call correlate(2.5_dp,2.82_dp,8)
+  !Measure correlation function in an interval of temperatures
+  !(initial temp., final temp, n. of points between them)
+  call correlate(2.4_dp,3._dp,4)
 
-  !call correlate(1.5_dp,2.5_dp,10)
 
 contains
 
@@ -56,8 +60,8 @@ contains
     allocate(results(N+1,NTs+1) )
     allocate(deltaresults(N+1,NTs+1) )
     k2=0
-    do j=0,NTs
-      T=T0+(Tf-T0)*real(j,dp)/real(NTs,dp)
+    do j=0,NTs-1
+      T=T0+(Tf-T0)*real(j,dp)/real(NTs-1,dp)
       write(*,*) T
       k2=k2+1
       call cold_start(spin)
@@ -71,7 +75,7 @@ contains
         end if
       end do
       call correlation_function2(corr1,corr2,CF,CFprom)
-      do i=1,N+1
+      do i=1,N
         results(i,k2)=CF(iv(i),1)
         deltaresults(i,k2)=CFprom(iv(i),1)
         !write(60,*) abs(i-1), CF(iv(i),1), CFprom(iv(i),1)
