@@ -8,16 +8,21 @@ program main
   use measurements
   implicit none
 
+  call cpu_time(starting)
+  
   !Write thermalization history in a file and computes autocorrelation
-  call thermalize(2.5_dp)
+  !call thermalize(2.5_dp)
 
   !Measure energy, magnetization, susceptibility and heat capacity in an
   !interval of temperatures, (initial temp., final temp, n. of points between them)
-  call vary_temp(2.4_dp,3.4_dp,5)
+  call vary_temp(1.0_dp,4.0_dp,20)
 
   !Measure correlation function in an interval of temperatures
   !(initial temp., final temp, n. of points between them)
-  call correlate(2.4_dp,3._dp,4)
+  !call correlate(2.4_dp,3._dp,4)
+  
+  call cpu_time(ending)
+  write(*,*) "Elapsed time: ", (ending-starting), " s"
 
 
 contains
@@ -29,12 +34,14 @@ contains
   real(dp) :: auto,auto_delta
   open(10, file = 'data/therm.dat', status = 'replace')
   allocate(spin(N,N))
-    call cold_start(spin)
+    !call cold_start(spin)
+    call hot_start(spin)
     do i=1,1000
       if(i==1 .or. mod(i,2)==0 ) then
         write(10,*) i, Hamilt(spin)/(real(N**2,dp) )
       end if
-      call montecarlo(spin,T )
+      !call montecarlo(spin,T)
+      !call cluster(spin,T)
     end do
     call autocorrelation(T,50,spin,auto,auto_delta)
     !write(*,*) 10, auto, auto_delta
@@ -68,6 +75,7 @@ contains
       call initialize2(corr1,corr2)
       k=0
       do i=1,sweeps
+        !call cluster(spin,T)
         call montecarlo(spin,T)
         if(i>thermalization .and. mod(i,eachsweep)==0) then
           k=k+1
@@ -116,7 +124,8 @@ contains
     T=T0+(Tf-T0)*real(j,dp)/real(NTs,dp)
     !T=2.24_dp+0.005_dp*real(j,dp)
     do i=1,sweeps
-      call montecarlo(spin,T )
+      call montecarlo(spin,T)
+      !call cluster(spin,T)
       if(i>thermalization .and. mod(i,eachsweep)==0) then
         k=k+1
         call measure(spin,E(k),M(k),susc1(k),heat1(k))
