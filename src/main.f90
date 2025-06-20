@@ -11,7 +11,7 @@ program main
   call cpu_time(starting)
   
   !Write thermalization history in a file and computes autocorrelation
-  call thermalize(2.8_dp)
+  call thermalize(2.2_dp)
 
   !Measure energy, magnetization, susceptibility and heat capacity in an
   !interval of temperatures, (initial temp., final temp, n. of points between them)
