@@ -57,8 +57,7 @@ fitto[2]=50
 fitto[3]=50
 fitto[4]=8
 fitto[5]=8
-
-
+#64
 
 f(x,A,tau)=A*exp(-x/tau)
 #g(x)=C*exp(-x/tau2)
