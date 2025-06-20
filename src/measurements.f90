@@ -139,60 +139,36 @@ contains
     end do
     CFprom(:,:)=Sqrt(real(Mbins-1,dp)*jackk(:,:)/real(Mbins,dp))
   end subroutine correlation_function2
-
-  subroutine autocorrelation(T,tmax,spin,auto,auto_delta)
+  
+  subroutine autocorrelation(T,tmax,spin)
     integer(i4), intent(in) :: tmax
     real(dp), intent(in) :: T
     integer(i4), dimension(N,N), intent(inout) :: spin
-    real(dp), intent(out) :: auto,auto_delta
-    real(dp), dimension(Nmsrs) :: E, auto1
-    real(dp), allocatable :: auto1j(:),Ej(:)
-    real(dp) :: E_ave,auto1_ave,autoj,jackk
+    real(dp), dimension(tmax+1) :: auto,auto_delta
+    real(dp) :: E(Nmsrs+tmax), auto1(Nmsrs)
+    real(dp) :: E_ave,auto1_ave,autoj(tmax+1,Nauto)
     integer(i4) :: i,j,tt
     !tt=tmax
     open(70, file = 'data/autocorr.dat', status = 'replace')
-
-    do i=1,Nmsrs+tmax
-      call montecarlo(spin,T)
-      E(i)=Hamilt(spin)/(N**2)
-    end do
-    call mean_0(E,E_ave)
-
-    do tt=0,tmax
-    auto=0._dp
-    auto_delta=0._dp
-
-    do i=1,Nmsrs
-      auto1(i)=E(i)*E(i+tt)
-    end do
-    call mean_0(auto1,auto1_ave)
-    auto=auto1_ave-(E_ave**2)
-    allocate(auto1j(Mbins) )
-    allocate(Ej(Mbins) )
-    auto1j=0._dp
-    Ej=0._dp
-    do j=1,Mbins
-      do i=1,Nmsrs
-        if(i .le. (j-1)*Nmsrs/Mbins) then
-          auto1j(j)=auto1j(j)+auto1(i)
-          Ej(j)=Ej(j)+E(i)
-        else if(i > j*Nmsrs/Mbins) then
-          auto1j(j)=auto1j(j)+auto1(i)
-          Ej(j)=Ej(j)+E(i)
-        end if
+    do j=1,Nauto
+      do i=1,Nmsrs+tmax
+        call montecarlo(spin,T)
+        E(i)=Hamilt(spin)/(N**2)
+      end do
+      call mean_0(E,E_ave )
+      
+      do tt=0,tmax
+        do i=1,Nmsrs
+          auto1(i)=E(i)*E(i+tt)
+        end do
+        call mean_0(auto1,auto1_ave)
+        auto=auto1_ave-(E_ave**2)
+        autoj(tt+1,j)=auto1_ave-(E_ave**2)
       end do
     end do
-    auto1j=auto1j/(real(Nmsrs,dp)-real(Nmsrs/Mbins,dp))
-    Ej=Ej/(real(Nmsrs,dp)-real(Nmsrs/Mbins,dp))
-    jackk=0._dp
-    do j=1,Mbins
-      autoj=auto1j(j)-(Ej(j)**2)
-      jackk=jackk+(autoj-auto )**2
-    end do
-    auto_delta=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp) )
-    deallocate(auto1j,Ej)
-
-    write(70,*) tt, auto, auto_delta
+    do tt=0,tmax
+      call mean_scalar(autoj(tt+1,:),auto(tt+1),auto_delta(tt+1))
+      write(70,*) tt,auto(tt+1),auto_delta(tt+1)
     end do
     close(70)
   end subroutine autocorrelation

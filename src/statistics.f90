@@ -210,8 +210,8 @@ contains
       y=y+x(k)
     end do
     y=y/real(N,dp)
-    call standard_error(x,y,deltay)
-    !call jackknife(x,y,deltay)
+    !call standard_error(x,y,deltay)
+    call jackknife(x,y,deltay)
   end subroutine mean_scalar
 
   subroutine mean_vector(x,y,deltay)

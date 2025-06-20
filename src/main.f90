@@ -11,11 +11,11 @@ program main
   call cpu_time(starting)
   
   !Write thermalization history in a file and computes autocorrelation
-  !call thermalize(2.5_dp)
+  call thermalize(2.8_dp)
 
   !Measure energy, magnetization, susceptibility and heat capacity in an
   !interval of temperatures, (initial temp., final temp, n. of points between them)
-  call vary_temp(1.0_dp,4.0_dp,20)
+  !call vary_temp(1.0_dp,4.0_dp,20)
 
   !Measure correlation function in an interval of temperatures
   !(initial temp., final temp, n. of points between them)
@@ -31,20 +31,18 @@ contains
   real(dp), intent(in) :: T
   integer(i4) :: i
   integer(i4), allocatable :: spin(:,:)
-  real(dp) :: auto,auto_delta
   open(10, file = 'data/therm.dat', status = 'replace')
   allocate(spin(N,N))
     !call cold_start(spin)
     call hot_start(spin)
-    do i=1,1000
+    do i=1,thermalization
       if(i==1 .or. mod(i,2)==0 ) then
         write(10,*) i, Hamilt(spin)/(real(N**2,dp) )
       end if
-      !call montecarlo(spin,T)
+      call montecarlo(spin,T)
       !call cluster(spin,T)
     end do
-    call autocorrelation(T,50,spin,auto,auto_delta)
-    !write(*,*) 10, auto, auto_delta
+    call autocorrelation(T,50,spin)
   close(10)
   deallocate(spin)
   end subroutine thermalize
