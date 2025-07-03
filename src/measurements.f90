@@ -8,12 +8,13 @@ module measurements
 
 contains
 
-  subroutine initialize1(E,M,susc1,heat1)
-    real(dp), dimension(:), intent(inout) :: E,M,susc1,heat1
+  subroutine initialize1(E,M,susc1,heat1,M4)
+    real(dp), dimension(:), intent(inout) :: E,M,susc1,heat1,M4
       E=0._dp
       M=0._dp
       susc1=0._dp
       heat1=0._dp
+      M4=0._dp
   end subroutine initialize1
 
   subroutine initialize2(corr1,corr2)
@@ -23,16 +24,17 @@ contains
       corr2=0._dp
   end subroutine initialize2
 
-  subroutine measure(spin,E,M,susc1,heat1)
+  subroutine measure(spin,E,M,susc1,heat1,M4)
     integer(i4), dimension(:,:), intent(in) :: spin
     real(dp), intent(out) :: E, M
-    real(dp), intent(inout) :: susc1,heat1
+    real(dp), intent(out) :: susc1,heat1,M4
     real(dp) :: MM
       MM=Magnet(spin)
       E=Hamilt(spin)
       M=abs(MM)
-      susc1=susc1+(MM**2)
-      heat1=heat1+(E**2)
+      susc1=MM**2
+      heat1=(E**2)
+      M4=(MM**4)
   end subroutine measure
 
   subroutine divideN(susc1,heat1)
@@ -148,11 +150,11 @@ contains
     real(dp) :: E(Nmsrs+tmax), auto1(Nmsrs)
     real(dp) :: E_ave,auto1_ave,autoj(tmax+1,Nauto)
     integer(i4) :: i,j,tt
-    !tt=tmax
     open(70, file = 'data/autocorr.dat', status = 'replace')
     do j=1,Nauto
       do i=1,Nmsrs+tmax
-        call montecarlo(spin,T)
+        !call montecarlo(spin,T)
+        call cluster(spin,T)
         E(i)=Hamilt(spin)/(N**2)
       end do
       call mean_0(E,E_ave )
