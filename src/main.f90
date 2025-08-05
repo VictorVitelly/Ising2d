@@ -11,11 +11,11 @@ program main
   call cpu_time(starting)
   
   !Write thermalization history in a file and computes autocorrelation
-  call thermalize(2.6_dp)
+  call thermalize(1._dp)
 
   !Measure energy, magnetization, susceptibility, heat capacity and binder cumulant in
   !an interval of temperatures, (initial temp., final temp, n. of points between them)
-  !call run_cluster(1.0_dp,4.0_dp,40)
+  call run_cluster(1._dp,4.0_dp,40)
 
   !Measure correlation function in an interval of temperatures
   !(initial temp., final temp, n. of points between them)
@@ -35,14 +35,14 @@ contains
   allocate(spin(N,N))
     !call cold_start(spin)
     call hot_start(spin)
-    do i=1,thermalization
-      if(i==1 .or. mod(i,2)==0 ) then
-        write(10,*) i, Hamilt(spin)/(real(N**2,dp) )
+    do i=1,10*thermalization
+      if(i==1 .or. mod(i,10)==0 ) then
+        write(10,*) i, Magnet(spin)/(real(N**2,dp) )
       end if
-      !call montecarlo(spin,T)
-      call cluster(spin,T)
+      call montecarlo(spin,T)
+      !call cluster(spin,T)
     end do
-    call autocorrelation(T,30,spin)
+    !call autocorrelation(T,30,spin)
   close(10)
   deallocate(spin)
   end subroutine thermalize
@@ -69,7 +69,7 @@ contains
       T=T0+(Tf-T0)*real(j,dp)/real(NTs-1,dp)
       write(*,*) T
       k2=k2+1
-      call cold_start(spin)
+      call hot_start(spin)
       call initialize2(corr1,corr2)
       k=0
       do i=1,sweeps
@@ -109,8 +109,8 @@ contains
   open(30, file = 'data/susceptibility.dat', status = 'replace')
   open(40, file = 'data/heat.dat', status = 'replace')
   open(50, file = 'data/binder.dat', status = 'replace')
-  open(60, file = 'data/rank.dat', status = 'replace')
-  open(70, file = 'data/rank2.dat', status = 'replace')
+  !open(60, file = 'data/rank.dat', status = 'replace')
+  !open(70, file = 'data/rank2.dat', status = 'replace')
   norm=real(Nmsrs,dp)
   vol=real(N**2,dp)
   do k=1,Nts
@@ -126,6 +126,9 @@ contains
       M2=0._dp
       M4=0._dp
       do i=1,sweeps
+        call montecarlo(spin,T)
+        !call cluster(spint,T)
+        !call cluster2(spin,T,csx,csx2)
         if(i>thermalization .and. mod(i,eachsweep)==0 ) then
           MM=Magnet(spin)
           EE=Hamilt(spin)
@@ -137,9 +140,6 @@ contains
           !cs(j)=cs(j)+csx
           !cs2(j)=cs2(j)+csx2
         end if
-        call montecarlo(spin,T)
-        !call cluster(spint,T)
-        !call cluster2(spin,T,csx,csx2)
       end do
       E(j)=E(j)/norm
       M(j)=M(j)/norm

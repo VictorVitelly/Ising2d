@@ -40,7 +40,6 @@ contains
         else
           call random_number(r1)
           p=exp(-dH/T)
-          !p=qexp(-dH/T)
           if(r1 < p ) then
             spin(i1,i2)=-spin(i1,i2)
           end if

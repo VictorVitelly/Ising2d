@@ -8,34 +8,12 @@ module measurements
 
 contains
 
-  subroutine initialize1(E,M,susc1,heat1,M4)
-    real(dp), dimension(:), intent(inout) :: E,M,susc1,heat1,M4
-      E=0._dp
-      M=0._dp
-      susc1=0._dp
-      heat1=0._dp
-      M4=0._dp
-  end subroutine initialize1
-
   subroutine initialize2(corr1,corr2)
     real(dp), dimension(N,Nmsrs), intent(inout) :: corr1
     real(dp), dimension(N,N,Nmsrs), intent(inout) :: corr2
       corr1=0._dp
       corr2=0._dp
   end subroutine initialize2
-
-  subroutine measure(spin,E,M,susc1,heat1,M4)
-    integer(i4), dimension(:,:), intent(in) :: spin
-    real(dp), intent(out) :: E, M
-    real(dp), intent(out) :: susc1,heat1,M4
-    real(dp) :: MM
-      MM=Magnet(spin)
-      E=Hamilt(spin)
-      M=abs(MM)
-      susc1=MM**2
-      heat1=(E**2)
-      M4=(MM**4)
-  end subroutine measure
 
   subroutine divideN(susc1,heat1)
     real(dp), intent(inout) :: susc1,heat1

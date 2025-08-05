@@ -1,6 +1,6 @@
 module functions
     use iso_fortran_env, only : dp => real64, i4 => int32
-    use parameters, only : N, q
+    use parameters, only : N
     implicit none
 
 contains
@@ -52,19 +52,6 @@ contains
     end do
   end function Magnet
   
-  function qexp(x) result(f)
-    real(dp), intent(in) :: x
-    real(dp) :: f
-    real(dp) :: k1,k2
-      k1=1._dp-q
-      k2=1._dp+(1._dp -q)*x
-      !if( k2 .le.  0._dp) then
-      !  write(*,*) "Error"
-      !  stop
-      !end if
-      f=k2**(1._dp/k1)
-  end function qexp
-  
   recursive function find(x,parent) result(out)
     integer(i4), intent(in) :: x
     integer(i4), intent(inout) :: parent(:)
@@ -86,6 +73,5 @@ contains
       parent(root_y)=root_x
     end if
   end subroutine union
-
 
 end module functions
