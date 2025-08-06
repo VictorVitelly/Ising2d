@@ -15,7 +15,7 @@ program main
 
   !Measure energy, magnetization, susceptibility, heat capacity and binder cumulant in
   !an interval of temperatures, (initial temp., final temp, n. of points between them)
-  call run_cluster(1._dp,4.0_dp,40)
+  call vary_temp(1._dp,4.0_dp,40)
 
   !Measure correlation function in an interval of temperatures
   !(initial temp., final temp, n. of points between them)
@@ -95,11 +95,11 @@ contains
     deallocate(corr1,corr2,CF,CFprom)
   end subroutine correlate
 
-  subroutine run_cluster(Ti,Tf,Nts)
+  subroutine vary_temp(Ti,Tf,Nts)
   real(dp), intent(in) :: Ti,Tf
   integer(i4), intent(in) :: Nts
   integer(i4), dimension(N,N) :: spin
-  integer(i4) :: i,j,k
+  integer(i4) :: i,i2,j,k
   real(dp), dimension(Nmsrs2) :: E,M,suscep,heat,U4
   real(dp) :: T,vol,norm,EE,MM,E_ave,E_delta,M_ave,M_delta,E2,M2,M4
   real(dp) :: suscep_ave,suscep_delta,heat_ave,heat_delta,U4_ave,U4_delta
@@ -114,9 +114,9 @@ contains
   norm=real(Nmsrs,dp)
   vol=real(N**2,dp)
   do k=1,Nts
-  write(*,*) k
   call hot_start(spin)
     T=Ti+(Tf-Ti)*real(k-1,dp)/real(Nts-1)
+    write(*,*) k, T
     E(:)=0._dp
     M(:)=0._dp
     !cs(:)=0._dp
@@ -125,21 +125,21 @@ contains
       E2=0._dp
       M2=0._dp
       M4=0._dp
-      do i=1,sweeps
-        call montecarlo(spin,T)
-        !call cluster(spint,T)
-        !call cluster2(spin,T,csx,csx2)
-        if(i>thermalization .and. mod(i,eachsweep)==0 ) then
-          MM=Magnet(spin)
-          EE=Hamilt(spin)
-          E(j)=E(j)+EE
-          M(j)=M(j)+abs(MM)
-          E2=E2+EE**2
-          M2=M2+MM**2
-          M4=M4+MM**4
-          !cs(j)=cs(j)+csx
-          !cs2(j)=cs2(j)+csx2
-        end if
+      do i=1,Nmsrs
+        do i2=1,eachsweep
+          call montecarlo(spin,T)
+          !call cluster(spint,T)
+          !call cluster2(spin,T,csx,csx2)
+        end do
+        MM=Magnet(spin)
+        EE=Hamilt(spin)
+        E(j)=E(j)+EE
+        M(j)=M(j)+abs(MM)
+        E2=E2+EE**2
+        M2=M2+MM**2
+        M4=M4+MM**4
+        !cs(j)=cs(j)+csx
+        !cs2(j)=cs2(j)+csx2
       end do
       E(j)=E(j)/norm
       M(j)=M(j)/norm
@@ -175,6 +175,6 @@ contains
   close(50)
   !close(60)
   !close(70)
-  end subroutine 
+  end subroutine vary_temp
 
 end program main
