@@ -325,12 +325,7 @@ contains
     real(dp), dimension(:), intent(in) :: x
     real(dp), intent(out) :: y,deltay
     integer(i4) :: k,Narr
-    Narr=size(x)
-    y=0._dp
-    do k=1,Narr
-      y=y+x(k)
-    end do
-    y=y/real(Narr,dp)
+    call mean_0(x,y)
     !call standard_error(x,y,deltay)
     call jackknife(x,y,deltay)
   end subroutine mean_scalar
@@ -358,67 +353,5 @@ contains
       end do
     end do
   end subroutine mean_matrix
-
-  subroutine heat_jackk(heat1,heat2,heat_ave,deltaheat)
-    real(dp), dimension(:), intent(in) :: heat1, heat2
-    real(dp), intent(out) :: heat_ave, deltaheat
-    integer(i4) :: N,k,i
-    real(dp) :: heat1t,heat2t,jackk,Ntot
-    real(dp), dimension(Mbins) :: heatmean1,heatmean2,heat_avev
-      N=size(heat1)
-      Ntot=real(N,dp)-real(N,dp)/real(Mbins,dp)
-      call mean_0(heat1,heat1t)
-      call mean_0(heat2,heat2t)
-      heat_ave=heat1t-heat2t**2
-      heatmean1=0._dp
-      heatmean2=0._dp
-      do i=1,Mbins
-        do k=1,N
-          if(k .le. (i-1)*N/Mbins) then
-            heatmean1(i)=heatmean1(i)+heat1(k)
-            heatmean2(i)=heatmean2(i)+heat2(k)
-          else if(k > i*N/Mbins) then
-            heatmean1(i)=heatmean1(i)+heat1(k)
-            heatmean2(i)=heatmean2(i)+heat2(k)
-          end if
-        end do
-        heat_avev(i)=(heatmean1(i)/Ntot) -(heatmean2(i)/Ntot)**2
-      end do
-      do k=1,Mbins
-        jackk=jackk+(heat_avev(k)-heat_ave )**2
-      end do
-      deltaheat=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
-  end subroutine heat_jackk
-  
-  subroutine binder(M2,M4,U,U_delta)
-    real(dp), dimension(Nmsrs), intent(in) :: M2,M4
-    real(dp), intent(out) :: U,U_delta
-    real(dp) :: M2_ave,M4_ave,Ntot,jackk
-    real(dp) :: M2_1(Mbins),M4_1(Mbins),U_ave(Mbins)
-    integer(i4) :: i,k
-    Ntot=real(Nmsrs,dp)-real(Nmsrs,dp)/real(Mbins,dp)
-    call mean_0(M2,M2_ave)
-    call mean_0(M4,M4_ave)
-    U=1._dp -M4_ave/(3._dp*M2_ave**2)
-    M2_1=0._dp
-    M4_1=0._dp
-    jackk=0._dp
-    do i=1,Mbins
-      do k=1,Nmsrs
-        if(k .le. (i-1)*Nmsrs/Mbins) then
-          M2_1(i)=M2_1(i)+M2(k)
-          M4_1(i)=M4_1(i)+M4(k)
-        else if(k > i*Nmsrs/Mbins) then
-          M2_1(i)=M2_1(i)+M2(k)
-          M4_1(i)=M4_1(i)+M4(k)        
-        end if
-      end do
-    U_ave(i)=1._dp-M4_1(i)*Ntot/(3._dp*M2_1(i)**2)
-    end do
-    do k=1,Mbins
-      jackk=jackk+(U_ave(k)-U )**2
-    end do
-    U_delta=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
-  end subroutine binder
 
 end module statistics

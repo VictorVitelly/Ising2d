@@ -15,11 +15,11 @@ program main
 
   !Measure energy, magnetization, susceptibility, heat capacity and binder cumulant in
   !an interval of temperatures, (initial temp., final temp, n. of points between them)
-  call vary_temp(1._dp,4.0_dp,40)
+  !call vary_temp(1._dp,4.0_dp,40)
 
   !Measure correlation function in an interval of temperatures
   !(initial temp., final temp, n. of points between them)
-  !call correlate(2.4_dp,3._dp,4)
+  call correlate(2.4_dp,3._dp,4)
   
   call cpu_time(ending)
   write(*,*) "Elapsed time: ", (ending-starting), " s"
@@ -47,52 +47,55 @@ contains
   deallocate(spin)
   end subroutine thermalize
 
-  subroutine correlate(T0,Tf,NTs)
-  real(dp), intent(in) :: T0,Tf
+  subroutine correlate(Ti,Tf,NTs)
+  real(dp), intent(in) :: Ti,Tf
   integer(i4), intent(in) :: NTs
-  integer(i4) :: i,k,j,k2
+  integer(i4) :: i,j,k,i2
   integer(i4), allocatable :: spin(:,:)
-  real(dp), allocatable :: corr1(:,:)
-  real(dp), allocatable :: corr2(:,:,:)
-  real(dp), allocatable :: CF(:,:),CFprom(:,:),results(:,:),deltaresults(:,:)
-  real(dp) :: T
+  real(dp), allocatable :: corr1(:)
+  real(dp), allocatable :: corr2(:,:)
+  real(dp), allocatable :: CF(:,:),CF_ave(:,:),CF_err(:,:)
+  real(dp) :: T,vol,norm
   open(60, file = 'data/corrfunc.dat', status = 'replace')
-    allocate(corr1(N,Nmsrs))
-    allocate(corr2(N,N,Nmsrs))
-    allocate(CF(N,N))
-    allocate(CFprom(N,N))
+    vol=real(N**2,dp)
+    norm=real(Nmsrs,dp)
     allocate(spin(N,N))
-    allocate(results(N+1,NTs+1) )
-    allocate(deltaresults(N+1,NTs+1) )
-    k2=0
-    do j=0,NTs-1
-      T=T0+(Tf-T0)*real(j,dp)/real(NTs-1,dp)
-      write(*,*) T
-      k2=k2+1
-      call hot_start(spin)
-      call initialize2(corr1,corr2)
-      k=0
-      do i=1,sweeps
-        !call cluster(spin,T)
+    allocate(corr1(N))
+    allocate(corr2(N,N))
+    allocate(CF(N,Nmsrs2))
+    allocate(CF_ave(N,Nts))
+    allocate(CF_err(N,Nts))
+    do k=1,Nts
+      T=Ti+(Tf-Ti)*real(k-1,dp)/real(Nts-1)
+      write(*,*) k
+      call cold_start(spin)
+      do j=1,thermalization
         call montecarlo(spin,T)
-        if(i>thermalization .and. mod(i,eachsweep)==0) then
-          k=k+1
-          call correlation(spin,k,corr1,corr2)
-        end if
+        !call cluster(spint,T)
       end do
-      call correlation_function2(corr1,corr2,CF,CFprom)
-      do i=1,N
-        results(i,k2)=CF(iv(i),1)
-        deltaresults(i,k2)=CFprom(iv(i),1)
-        !write(60,*) abs(i-1), CF(iv(i),1), CFprom(iv(i),1)
+      do j=1,Nmsrs2
+        call initialize(corr1,corr2)
+        do i=1,Nmsrs
+          do i2=1,eachsweep
+            call montecarlo(spin,T)
+            !call cluster(spint,T)          
+          end do
+          call correlation(spin,corr1,corr2)
+        end do
+        corr1=corr1/norm
+        corr2=corr2/norm
+        call correlation_function(corr1,corr2,CF(:,j))
+      end do
+      do j=1,N
+        call mean_scalar(CF(j,:),CF_ave(j,k) ,CF_err(j,k))
       end do
     end do
-    do i=1,N
-      write(60,*) abs(i-1), results(i,:), deltaresults(i,:)
+    do k=1,N+1
+      write(60,*) abs(k-1), CF_ave(iv(k),:), CF_err(iv(k),:)
     end do
     close(60)
     deallocate(spin)
-    deallocate(corr1,corr2,CF,CFprom)
+    deallocate(corr1,corr2,CF,CF_ave,CF_err)
   end subroutine correlate
 
   subroutine vary_temp(Ti,Tf,Nts)
