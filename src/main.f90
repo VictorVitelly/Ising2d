@@ -20,7 +20,7 @@ program main
 
   !Measure correlation function in an interval of temperatures
   !(initial temp., final temp, n. of points between them)
-  call correlate(2.0_dp,3.0_dp,21)
+  call correlate(1.8_dp,3.2_dp,31)
   
   call cpu_time(ending)
   write(*,*) "Elapsed time: ", (ending-starting), " s"

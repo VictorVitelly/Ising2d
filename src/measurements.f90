@@ -28,7 +28,7 @@ contains
       end do
     end do
     do i1=1,N
-      corr1(i1)=corr1(i1)+spinvec(i1)
+      !corr1(i1)=corr1(i1)+spinvec(i1)
       do i2=1,N
         corr2(i1,i2)=corr2(i1,i2)+spinvec(i1)*spinvec(i2)
       end do
@@ -41,9 +41,9 @@ contains
     real(dp), dimension(N,N), intent(inout) :: corr2
     integer(i4) :: i1,i2
     do i1=1,N
-      corr1(i1)=spin(i1,1)
+      corr1(i1)=abs(real(spin(i1,1),dp))
       do i2=1,N
-        corr2(i1,i2)=corr2(i1,i2)+spin(i1,1)*spin(i2,1)
+        corr2(i1,i2)=corr2(i1,i2)+real(spin(i1,1)*spin(i2,1),dp)
       end do
     end do
   end subroutine correlationb
@@ -54,9 +54,9 @@ contains
     real(dp), dimension(N), intent(out) :: CF
     integer(i4) :: i1
     do i1=1,N
-      CF(i1)=corr2(i1,1)-(corr1(1)**2)
+      CF(i1)=corr2(i1,1)!-(corr1(1)**2)
     end do
-    !CF(:)=CF(:)/real(N**2,dp)
+    CF(:)=CF(:)/real(N**2,dp)
   end subroutine correlation_function
   
   subroutine correlation2(CF_ave,CF_err,xi2_ave,xi2_err)
