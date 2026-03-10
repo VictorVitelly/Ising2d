@@ -257,6 +257,16 @@ contains
     deallocate(flip_cluster,rank) !cluster size
     
   end subroutine cluster2
+  
+  subroutine cycles(spin,T)
+  integer(i4), dimension(:,:), intent(inout) :: spin
+  real(dp), intent(in) :: T
+  integer(i4) :: i
+  do i=1,4
+    call montecarlo(spin,T)
+  end do
+  call cluster(spin,T) 
+  end subroutine cycles
 
 
   !Error statistics

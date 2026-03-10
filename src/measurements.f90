@@ -19,7 +19,7 @@ contains
     integer(i4), dimension(N,N), intent(in) :: spin
     real(dp), dimension(N), intent(inout) :: corr1
     real(dp), dimension(N,N), intent(inout) :: corr2
-    real(dp), dimension(N) :: spinvec
+    real(dp):: spinvec(N)
     integer(i4) :: i1,i2
     spinvec=0._dp
     do i1=1,N
@@ -34,6 +34,19 @@ contains
       end do
     end do
   end subroutine correlation
+  
+  subroutine correlationb(spin,corr1,corr2)
+    integer(i4), dimension(N,N), intent(in) :: spin
+    real(dp), dimension(N), intent(inout) :: corr1
+    real(dp), dimension(N,N), intent(inout) :: corr2
+    integer(i4) :: i1,i2
+    do i1=1,N
+      corr1(i1)=spin(i1,1)
+      do i2=1,N
+        corr2(i1,i2)=corr2(i1,i2)+spin(i1,1)*spin(i2,1)
+      end do
+    end do
+  end subroutine correlationb
 
   subroutine correlation_function(corr1,corr2,CF)
     real(dp), dimension(N), intent(in) :: corr1
@@ -41,9 +54,36 @@ contains
     real(dp), dimension(N), intent(out) :: CF
     integer(i4) :: i1
     do i1=1,N
-      CF(i1)=corr2(i1,1)-corr1(i1)*corr1(1)
+      CF(i1)=corr2(i1,1)-(corr1(1)**2)
     end do
+    !CF(:)=CF(:)/real(N**2,dp)
   end subroutine correlation_function
+  
+  subroutine correlation2(CF_ave,CF_err,xi2_ave,xi2_err)
+    real(dp), intent(in) :: CF_ave(N),CF_err(N)
+    real(dp),intent(out) :: xi2_ave,xi2_err
+    real(dp) :: F1,F2,DF1,DF2,DFTOT
+    integer(i4) :: i1,j1
+    xi2_ave=0._dp
+    xi2_err=0._dp
+    F1=0._dp
+    F2=0._dp
+    DF1=0._dp
+    DF2=0._dp
+    do j1=1,N
+        F1=F1+CF_ave(j1)
+        F2=F2+CF_ave(j1)*COS(real(j1-1,dp)*2._dp*PI/real(N,dp))
+        DF1=DF1+(CF_ave(j1) *CF_err(j1))**2
+        DF2=DF2+(CF_ave(j1)*COS(real(j1-1,dp)*2._dp*PI/real(N,dp)) *CF_err(j1) )**2
+        !write(*,*) 'CF', CF_ave(j1),CF_ave(j1)*COS(real(j1,dp)*2._dp*PI/real(N,dp))
+    end do
+    xi2_ave=sqrt(F1/F2-1._dp)/(2._dp*SIN(PI/N))
+    DF1=SQRT(DF1)
+    DF2=SQRT(DF2)
+    DFTOT=SQRT((DF1/F2)**2+(DF2*F1/(F2**2))**2 )
+    xi2_err=DFTOT/(4._dp*sqrt(F1/F2-1._dp)*SIN(PI/N) )
+    write(*,*) 'F1/F2(i)=', F1,F2, 'xi2(i)=',xi2_ave
+  end subroutine correlation2
   
   subroutine autocorrelation(T,tmax,spin)
     integer(i4), intent(in) :: tmax
