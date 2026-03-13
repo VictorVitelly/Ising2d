@@ -54,13 +54,12 @@ contains
   integer(i4), intent(in) :: NTs
   integer(i4) :: i,j,k,i2
   integer(i4), allocatable :: spin(:,:)
-  real(dp), allocatable :: corr1(:),M2(:)
+  real(dp), allocatable :: corr1(:)
   real(dp), allocatable :: corr2(:,:)
   real(dp), allocatable :: CF(:,:),CF_ave(:,:),CF_err(:,:)
-  real(dp) :: T,vol,norm,M2_ave,M2_err,xi2_ave,xi2_err,xi2_ave2,xi2_err2
+  real(dp) :: T,vol,norm,xi2_ave,xi2_err
   open(60, file = 'data/corrfunc.dat', status = 'replace')
   open(70, file = 'data/corrlen2.dat', status = 'replace')
-  open(80, file = 'data/magnet2.dat', status = 'replace')
     vol=real(N**2,dp)
     norm=real(Nmsrs,dp)
     allocate(spin(N,N))
@@ -69,48 +68,41 @@ contains
     allocate(CF(N,Nmsrs2))
     allocate(CF_ave(N,Nts))
     allocate(CF_err(N,Nts))
-    allocate(M2(Nmsrs2))
     do k=1,Nts
       T=Ti+(Tf-Ti)*real(k-1,dp)/real(Nts-1)
       write(*,*) k, 'de', Nts 
-      M2(:)=0._dp
-      call cold_start(spin)
+      !call hot_start(spin)
       !do j=1,thermalization
         !call montecarlo(spin,T)
         !call cluster(spin,T)
-      !  call cycles(spin,T)
+        !call cycles(spin,T)
       !end do
       do j=1,Nmsrs2
         call hot_start(spin)
-        call initialize(corr1,corr2)
-        corr1(:)=0._dp
         do i=1,thermalization
           call cycles(spin,T)
         end do
+        call initialize(corr1,corr2)
+        corr1(:)=0._dp
         do i=1,Nmsrs
           do i2=1,eachsweep
             !call montecarlo(spin,T)
             !call cluster(spin,T)         
             call cycles(spin,T)
           end do
-          M2(j)=M2(j)+(Magnet(spin)**2)
           !call correlation(spin,corr1,corr2)
           call correlationoptim(spin,corr1)
         end do
         corr1(:)=corr1(:)/norm
-        M2(j)=M2(j)/norm
         !corr2=corr2/norm
         !call correlation_function(corr1,corr2,CF(:,j))
         CF(:,j)=corr1(:)
       end do
-      call mean_scalar(M2,M2_ave,M2_err)
-      write(80,*) T, M2_ave/vol, M2_err/vol
       do j=1,N
         call mean_scalar(CF(j,:),CF_ave(j,k) ,CF_err(j,k))
       end do
-      call correlation2(CF_ave(:,k),CF_err(:,k),M2_ave,M2_err,xi2_ave2,xi2_err2)
       call secondmomentum(CF,xi2_ave,xi2_err)
-      write(70,*) T,xi2_ave,xi2_err,xi2_ave2,xi2_err2
+      write(70,*) T,xi2_ave,xi2_err
     end do
     
     do k=1,N+1

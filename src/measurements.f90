@@ -48,6 +48,7 @@ contains
     end do
     do i1=1,N
         corr1(i1)=corr1(i1)+spinvec(i1)*spinvec(1)
+        !corr1(i1)=corr1(i1)+spin(1,1)*spin(i1,1)
     end do
   end subroutine correlationoptim
 
@@ -79,44 +80,10 @@ contains
     F12(i1)=F1(i1)/F2(i1)
   end do
   call mean_scalar(F12,F12_ave,F12_err)
-  !do i1=1,Nmsrs2
-  !  xi2(i1)=sqrt( (F1(i1)/F2(i2) -1._dp))/(2._dp*abs(SIN(PI/real(N,dp))) ) 
-  !  write(*,*) F1(i1),F2(i1),xi2(i1)
-  !end do
-  !call mean_scalar(xi2,xi2_ave,xi2_err)
   xi2_ave=sqrt( (F12_ave -1._dp))/(2._dp*abs(SIN(PI/real(N,dp))) ) 
   xi2_err=F12_err/(4._dp*sqrt(F12_ave-1._dp)*abs(SIN(PI/real(N,dp))) )
   write(*,*) xi2_ave,xi2_err
   end subroutine secondmomentum
-  
-  subroutine correlation2(CF_ave,CF_err,M2_ave,M2_err,xi2_ave,xi2_err)
-    real(dp), intent(in) :: CF_ave(N),CF_err(N),M2_ave,M2_err
-    real(dp),intent(out) :: xi2_ave,xi2_err
-    real(dp) :: F1,F2,DF1,DF2,DFTOT
-    integer(i4) :: i1,j1
-    xi2_ave=0._dp
-    xi2_err=0._dp
-    F1=0._dp
-    F2=0._dp
-    DF1=0._dp
-    DF2=0._dp
-    do j1=1,N
-        !F1=F1+CF_ave(j1)
-        F2=F2+CF_ave(j1)*COS(real(j1,dp)*2._dp*PI/real(N,dp))
-        !DF1=DF1+(CF_ave(j1) *CF_err(j1))**2
-        DF2=DF2+(CF_ave(j1)*COS(real(j1,dp)*2._dp*PI/real(N,dp)) *CF_err(j1) )**2
-        !write(*,*) 'CF', CF_ave(j1),CF_ave(j1)*COS(real(j1,dp)*2._dp*PI/real(N,dp))
-    end do
-    F1=M2_ave
-    DF1=M2_err
-    xi2_ave=sqrt(F1/F2-1._dp)/(2._dp*abs(SIN(PI/real(N,dp))))
-    DF1=SQRT(DF1)
-    DF2=SQRT(DF2)
-    DFTOT=SQRT((DF1/F2)**2+(DF2*F1/(F2**2))**2 )
-    xi2_err=DFTOT/(4._dp*sqrt(F1/F2-1._dp)*SIN(PI/real(N,dp)) )
-    write(*,*) 'F1/F2(i)=', F1,F2, 'dF1=',DF1, 'dF2=',DF2
-    write(*,*) 'xi2(i)=',xi2_ave, 'dxi2(i)=', xi2_err
-  end subroutine correlation2
   
   subroutine autocorrelation(T,tmax,spin)
     integer(i4), intent(in) :: tmax
