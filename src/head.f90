@@ -1,0 +1,299 @@
+module head
+
+  use iso_fortran_env, only : dp => real64, i4 => int32
+  use parameters
+  use functions
+  use statistics
+  use measurements
+  implicit none
+
+contains
+
+  subroutine autocorrelation(T,tmax,spin)
+    integer(i4), intent(in) :: tmax
+    real(dp), intent(in) :: T
+    integer(i4), dimension(N,N), intent(inout) :: spin
+    real(dp), dimension(tmax+1) :: auto,auto_delta
+    real(dp) :: E(Nmsrs+tmax), auto1(Nmsrs)
+    real(dp) :: E_ave,auto1_ave,autoj(tmax+1,Nauto)
+    integer(i4) :: i,j,tt
+    open(70, file = 'data/autocorr.dat', status = 'replace')
+    do j=1,Nauto
+      do i=1,Nmsrs+tmax
+        !call montecarlo(spin,T)
+        call cluster(spin,T)
+        E(i)=Hamilt(spin)/(N**2)
+      end do
+      call mean_0(E,E_ave )
+      
+      do tt=0,tmax
+        do i=1,Nmsrs
+          auto1(i)=E(i)*E(i+tt)
+        end do
+        call mean_0(auto1,auto1_ave)
+        auto=auto1_ave-(E_ave**2)
+        autoj(tt+1,j)=auto1_ave-(E_ave**2)
+      end do
+    end do
+    do tt=0,tmax
+      call mean_scalar(autoj(tt+1,:),auto(tt+1),auto_delta(tt+1))
+      write(70,*) tt,auto(tt+1),auto_delta(tt+1)
+    end do
+    close(70)
+  end subroutine autocorrelation
+  
+  subroutine thermalize(T)
+  real(dp), intent(in) :: T
+  integer(i4) :: i
+  integer(i4), allocatable :: spin(:,:)
+  open(10, file = 'data/therm.dat', status = 'replace')
+  allocate(spin(N,N))
+    !call cold_start(spin)
+    call hot_start(spin)
+    do i=1,thermalization
+      if(i==1 .or. mod(i,2)==0 ) then
+        write(10,*) i, Hamilt(spin)/(real(N**2,dp) )
+      end if
+      !call montecarlo(spin,T)
+      !call cluster(spin,T)
+      call cycles(spin,T)
+    end do
+    !call autocorrelation(T,30,spin)
+  close(10)
+  deallocate(spin)
+  end subroutine thermalize
+
+  subroutine correlate(Ti,Tf,NTs)
+  real(dp), intent(in) :: Ti,Tf
+  integer(i4), intent(in) :: NTs
+  integer(i4) :: i,j,k,i2
+  integer(i4), allocatable :: spin(:,:)
+  real(dp), allocatable :: corr1(:)
+  real(dp), allocatable :: corr2(:,:)
+  real(dp), allocatable, dimension(:,:) :: CF,CF_ave,CF_err
+  real(dp) :: M(Nmsrs2),MM(Nmsrs2),M_ave,M_err
+  real(dp) :: T,vol,norm,xi2_ave,xi2_err,bug
+  open(60, file = 'data/corrfunc.dat', status = 'replace')
+  open(70, file = 'data/corrlen2.dat', status = 'replace')
+    vol=real(N**2,dp)
+    norm=real(Nmsrs,dp)
+    allocate(spin(N,N))
+    allocate(corr1(N))
+    allocate(corr2(N,N))
+    allocate(CF(N,Nmsrs2))
+    allocate(CF_ave(N,Nts))
+    allocate(CF_err(N,Nts))
+    do k=1,Nts
+      T=Ti+(Tf-Ti)*real(k-1,dp)/real(Nts-1)
+      write(*,*) k, 'de', Nts 
+      !M(:)=0._dp
+      call hot_start(spin)
+      do j=1,thermalization
+        call cycles(spin,T)
+      end do
+      do j=1,Nmsrs2
+        !call hot_start(spin)
+        !do i=1,thermalization
+        !  call cycles(spin,T)
+        !end do
+        call initialize(corr1,corr2)
+        corr1(:)=0._dp
+        do i=1,Nmsrs
+          do i2=1,eachsweep       
+            call cycles(spin,T)
+          end do
+          !M(j)=M(j)+abs(magnet(spin))/vol
+          call correlationoptim(spin,corr1)
+        end do
+        !MM(j)=(M(j)**2)/(norm**2)
+        corr1(:)=corr1(:)/norm
+        CF(:,j)=corr1(:)
+      end do
+      !call mean_scalar(MM,M_ave,M_err)
+      do j=1,N
+        call mean_scalar(CF(j,:),CF_ave(j,k) ,CF_err(j,k))
+      end do
+      call secondmomentum(CF,xi2_ave,xi2_err)
+      write(70,*) T,xi2_ave,xi2_err
+      do j=1,N
+        call mean_scalar(CF(j,:),CF_ave(j,k) ,CF_err(j,k))
+      end do
+    end do
+    
+    do k=1,N+1
+      write(60,*) abs(k-1), CF_ave(iv(k),:), CF_err(iv(k),:)
+    end do
+    close(60)
+    deallocate(spin)
+    deallocate(corr1,corr2,CF,CF_ave,CF_err)
+  end subroutine correlate
+
+  subroutine vary_temp(Ti,Tf,Nts)
+  real(dp), intent(in) :: Ti,Tf
+  integer(i4), intent(in) :: Nts
+  integer(i4), dimension(N,N) :: spin
+  integer(i4) :: i,i2,j,k
+  real(dp), dimension(Nmsrs2) :: E,M,suscep,heat,U4
+  real(dp) :: T,vol,norm,EE,MM,E_ave,E_delta,M_ave,M_delta,E2,M2,M4
+  real(dp) :: suscep_ave,suscep_delta,heat_ave,heat_delta,U4_ave,U4_delta
+  !real(dp) :: csx,csx2,cs(Nmsrs2),cs2(Nmsrs2),cs_ave,cs_delta,cs2_ave,cs2_delta
+  open(10, file = 'data/energy.dat', status = 'replace')
+  open(20, file = 'data/magnetization.dat', status = 'replace')
+  open(30, file = 'data/susceptibility.dat', status = 'replace')
+  open(40, file = 'data/heat.dat', status = 'replace')
+  open(50, file = 'data/binder.dat', status = 'replace')
+  !open(60, file = 'data/rank.dat', status = 'replace')
+  !open(70, file = 'data/rank2.dat', status = 'replace')
+  norm=real(Nmsrs,dp)
+  vol=real(N**2,dp)
+  do k=1,Nts
+  call hot_start(spin)
+    T=Ti+(Tf-Ti)*real(k-1,dp)/real(Nts-1)
+    write(*,*) k, T
+    E(:)=0._dp
+    M(:)=0._dp
+    !cs(:)=0._dp
+    !cs2(:)=0._dp
+    do j=1,thermalization
+      call cycles(spin,T)
+    end do
+    do j=1,Nmsrs2
+      E2=0._dp
+      M2=0._dp
+      M4=0._dp
+      do i=1,Nmsrs
+        do i2=1,eachsweep
+          call cycles(spin,T)
+        end do
+        MM=Magnet(spin)
+        EE=Hamilt(spin)
+        E(j)=E(j)+EE
+        M(j)=M(j)+abs(MM)
+        E2=E2+EE**2
+        M2=M2+MM**2
+        M4=M4+MM**4
+        !cs(j)=cs(j)+csx
+        !cs2(j)=cs2(j)+csx2
+      end do
+      E(j)=E(j)/norm
+      M(j)=M(j)/norm
+      E2=E2/norm
+      M2=M2/norm
+      M4=M4/norm
+      suscep(j)=M2-M(j)**2
+      heat(j)=E2-E(j)**2
+      U4(j)=1._dp-M4/(3._dp*M2**2)
+      !cs(j)=cs(j)/norm
+      !cs2(j)=cs2(j)/norm
+    end do
+    call mean_scalar(E,E_ave,E_delta)
+    call mean_scalar(M,M_ave,M_delta)
+    call mean_scalar(suscep,suscep_ave,suscep_delta)
+    call mean_scalar(heat,heat_ave,heat_delta)
+    call mean_scalar(U4,U4_ave,U4_delta)
+    !call mean_scalar(cs,cs_ave,cs_delta)
+    !call mean_scalar(cs2,cs2_ave,cs2_delta)
+    write(10,*) T, E_ave/vol, E_delta/vol
+    write(20,*) T, M_ave/vol, M_delta/vol
+    write(30,*) T, suscep_ave/(vol*T), suscep_delta/(vol*T)
+    write(40,*) T, heat_ave/(vol*T), heat_delta/(vol*T)
+    write(50,*) T, U4_ave, U4_delta
+    !write(60,*) T, cs_ave,cs_delta
+    !write(70,*) T, cs2_ave/(vol**2), cs2_delta/(vol**2)
+  end do
+  
+  close(10)
+  close(20)
+  close(30)
+  close(40)
+  close(50)
+  !close(60)
+  !close(70)
+  end subroutine vary_temp
+  
+  subroutine correlate2(Ti,Tf,NTs)
+  real(dp), intent(in) :: Ti,Tf
+  integer(i4), intent(in) :: NTs
+  integer(i4) :: i,j,k,i2
+  integer(i4), allocatable :: spin(:,:)
+  real(dp), allocatable :: corr1(:)
+  real(dp), allocatable :: corr2(:,:)
+  real(dp), allocatable :: CF(:,:,:),CF_ave(:,:),CF_err(:,:)
+  real(dp) :: M(Nmsrs2),MM(Nmsrs2),M_ave,M_err
+  real(dp) :: T,vol,norm,xi2_ave,xi2_err,bug
+  open(60, file = 'data/corrfunc.dat', status = 'replace')
+  open(70, file = 'data/corrlen2.dat', status = 'replace')
+    vol=real(N**2,dp)
+    norm=real(Nmsrs,dp)
+    allocate(spin(N,N))
+    allocate(corr1(N))
+    allocate(corr2(N,N))
+    allocate(CF(N,N,Nmsrs2))
+    allocate(CF_ave(N,Nts))
+    allocate(CF_err(N,Nts))
+    do k=1,Nts
+      T=Ti+(Tf-Ti)*real(k-1,dp)/real(Nts-1)
+      write(*,*) k, 'de', Nts 
+      M(:)=0._dp
+      !call hot_start(spin)
+      !do j=1,thermalization
+        !call montecarlo(spin,T)
+        !call cluster(spin,T)
+        !call cycles(spin,T)
+      !end do
+      do j=1,Nmsrs2
+        call hot_start(spin)
+        do i=1,thermalization
+          call cycles(spin,T)
+        end do
+        call initialize(corr1,corr2)
+        do i=1,Nmsrs
+          do i2=1,eachsweep       
+            call cycles(spin,T)
+          end do
+          M(j)=M(j)+abs(magnet(spin))
+          call correlation(spin,corr1,corr2)
+        end do
+        MM(j)=(M(j)**2)/((norm*vol)**2)
+        corr1(:)=corr1(:)/norm
+        corr2(:,:)=corr2(:,:)/norm
+        CF(:,:,j)=corr2(:,:)
+      end do
+      call mean_scalar(MM,M_ave,M_err)
+      write(*,*) M_ave
+      do j=1,N
+        call mean_scalar(CF(j,1,:),CF_ave(j,k) ,CF_err(j,k))
+        CF_ave(j,k)=CF_ave(j,k)-M_ave
+        CF_err(j,k)=CF_err(j,k)+M_err
+      end do
+      
+      !bug=CF_ave(N/2+1,k)-M_ave+2._dp*(CF_err(N/2+1,k)+M_err )
+      !write(*,*) CF_ave(1,k),CF_ave(int(N/2)+1,k),M_ave
+      !if(bug<0._dp) then
+      call secondmomentum2(CF,xi2_ave,xi2_err)
+        !write(*,*) 'Used disconnected'
+      !else 
+        !do j=1,N 
+          !do i=1,Nmsrs2
+           ! CF(j,i)=CF(j,i)-M_ave
+          !end do
+        !end do
+        !call secondmomentum(CF,xi2_ave,xi2_err)
+        !write(*,*) 'Used connected'
+      !end if
+      write(70,*) T,xi2_ave,xi2_err
+      !do j=1,N
+      !  call mean_scalar(CF(j,:),CF_ave(j,k) ,CF_err(j,k))
+      !end do
+    end do
+    
+    do k=1,N+1
+      write(60,*) abs(k-1), CF_ave(iv(k),:), CF_err(iv(k),:)
+    end do
+    close(60)
+    deallocate(spin)
+    deallocate(corr1,corr2,CF,CF_ave,CF_err)
+  end subroutine correlate2
+
+
+end module head

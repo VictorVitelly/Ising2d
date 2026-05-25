@@ -22,15 +22,14 @@ contains
     real(dp):: spinvec(N)
     integer(i4) :: i1,i2
     spinvec=0._dp
+    !do i1=1,N
+    !  do i2=1,N
+    !    spinvec(i1)=spinvec(i1)+real(spin(i1,i2),dp)
+    !  end do
+    !end do
     do i1=1,N
       do i2=1,N
-        spinvec(i1)=spinvec(i1)+real(spin(i1,i2),dp)
-      end do
-    end do
-    do i1=1,N
-      !corr1(i1)=corr1(i1)+spinvec(i1)
-      do i2=1,N
-        corr2(i1,i2)=corr2(i1,i2)+spinvec(i1)*spinvec(i2)
+        corr2(i1,i2)=corr2(i1,i2)+spin(i1,i2)*spin(1,1)
       end do
     end do
   end subroutine correlation
@@ -58,9 +57,9 @@ contains
     real(dp), dimension(N), intent(out) :: CF
     integer(i4) :: i1
     do i1=1,N
-      CF(i1)=corr2(i1,1)!-(corr1(1)**2)
+      CF(i1)=corr2(i1,1)
     end do
-    CF(:)=CF(:)/real(N**2,dp)
+    !CF(:)=CF(:)/real(N**2,dp)
   end subroutine correlation_function
   
   subroutine secondmomentum(CF,xi2_ave,xi2_err)
@@ -85,37 +84,31 @@ contains
   write(*,*) xi2_ave,xi2_err
   end subroutine secondmomentum
   
-  subroutine autocorrelation(T,tmax,spin)
-    integer(i4), intent(in) :: tmax
-    real(dp), intent(in) :: T
-    integer(i4), dimension(N,N), intent(inout) :: spin
-    real(dp), dimension(tmax+1) :: auto,auto_delta
-    real(dp) :: E(Nmsrs+tmax), auto1(Nmsrs)
-    real(dp) :: E_ave,auto1_ave,autoj(tmax+1,Nauto)
-    integer(i4) :: i,j,tt
-    open(70, file = 'data/autocorr.dat', status = 'replace')
-    do j=1,Nauto
-      do i=1,Nmsrs+tmax
-        !call montecarlo(spin,T)
-        call cluster(spin,T)
-        E(i)=Hamilt(spin)/(N**2)
-      end do
-      call mean_0(E,E_ave )
-      
-      do tt=0,tmax
-        do i=1,Nmsrs
-          auto1(i)=E(i)*E(i+tt)
-        end do
-        call mean_0(auto1,auto1_ave)
-        auto=auto1_ave-(E_ave**2)
-        autoj(tt+1,j)=auto1_ave-(E_ave**2)
+  subroutine secondmomentum2(CF,xi2_ave,xi2_err)
+  real(dp),dimension(N,N,Nmsrs2),intent(in) :: CF
+  real(dp),intent(out) :: xi2_ave,xi2_err 
+  integer(i4) :: i1,i2,i3
+  real(dp) :: xi2(Nmsrs2),F1(Nmsrs2),F2(Nmsrs2),F12(Nmsrs2),F12_ave,F12_err
+  F1(:)=0._dp
+  F2(:)=0._dp
+  do i1=1,Nmsrs2
+    do i2=1,N
+      do i3=1,N
+        !F1(i1)=F1(i1)+CF(iv(i3),iv(i2),i1)
+        !F2(i1)=F2(i1)+CF(iv(i3),iv(i2),i1)*COS(real(i2-1,dp)*2._dp*PI/real(N,dp))
+        F1(i1)=F1(i1)+CF(i3,i2,i1)
+        F2(i1)=F2(i1)+CF(i3,i2,i1)*COS(real(i2-1,dp)*2._dp*PI/real(N,dp))
       end do
     end do
-    do tt=0,tmax
-      call mean_scalar(autoj(tt+1,:),auto(tt+1),auto_delta(tt+1))
-      write(70,*) tt,auto(tt+1),auto_delta(tt+1)
-    end do
-    close(70)
-  end subroutine autocorrelation
+  end do
+  do i1=1,Nmsrs2
+    F12(i1)=F1(i1)/F2(i1)
+  end do
+  call mean_scalar(F12,F12_ave,F12_err)
+  xi2_ave=sqrt( (F12_ave -1._dp))/(2._dp*abs(SIN(PI/real(N,dp))) ) 
+  xi2_err=F12_err/(4._dp*sqrt(F12_ave-1._dp)*abs(SIN(PI/real(N,dp))) )
+  write(*,*) xi2_ave,xi2_err
+  end subroutine secondmomentum2
+  
 
 end module measurements
